@@ -3,5 +3,5 @@
 while true
 do
   python getCodes.py
-  sleep 1
+  sleep 2
 done

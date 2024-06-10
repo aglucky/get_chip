@@ -5,6 +5,7 @@ import requests
 import os
 import asyncio
 import openCode
+import time
 
 load_dotenv()
 USER = os.getenv("USER")
@@ -18,8 +19,19 @@ client.login(
     password=PASS
 )
 
+def get_tweets_with_backoff(user, max_retries=5):
+    base_sleep = 1  # Base sleep time in seconds
+    for i in range(max_retries):
+        try:
+            return user.get_tweets('Tweets', count=2)
+        except Exception as e:
+            print(f"Attempt {i+1}: Failed to fetch tweets, retrying in {base_sleep} seconds. Error: {e}")
+            time.sleep(base_sleep)
+            base_sleep *= 2  # Double the sleep time for the next retry
+    raise Exception("Failed to fetch tweets after several retries")
+
 user = client.get_user_by_screen_name('ChipotleTweets')
-tweets = user.get_tweets('Tweets', count=5)
+tweets = get_tweets_with_backoff(user)
 seen = set()
 try:
     with open('images/seen.txt', 'r') as file:
@@ -39,8 +51,6 @@ async def textCode(tweet):
         subprocess.run(command, check=True)
         with open('images/seen.txt', 'a') as file:
             file.write(f"{tweet.id}\n")
-
-
 
 async def main():
     tasks = [textCode(tweet) for tweet in tweets[:5]]
